@@ -11,7 +11,7 @@ import com.dispalt.fwatch.core.BuildLink
 import com.dispalt.fwatch.sbt.server.{ ReloadableServer, ServerWithStop }
 
 import scala.collection.JavaConverters._
-import scala.concurrent.Await
+import scala.concurrent.{ Await, Future }
 import scala.concurrent.duration.Duration
 import scala.util.{ Failure, Success, Try }
 import scala.util.control.NonFatal
@@ -70,66 +70,112 @@ object FastWatchServerStart {
   ): ReloadableServer = {
     val classLoader = getClass.getClassLoader
     Threads.withContextClassLoader(classLoader) {
+      try {
 
-      System.out.println("\n---- Current ClassLoader ----\n")
-      System.out.println(this.getClass.getClassLoader)
+        System.out.println("\n---- Current ClassLoader ----\n")
+        System.out.println(this.getClass.getClassLoader)
+        val path: File = buildLink.projectPath
 
-      val reloaded = buildLink.reload match {
-        case NonFatal(t)     => Failure(t)
-        case cl: ClassLoader => Success(Some(cl))
-        case null            => Success(None)
-      }
+        val appLauncher = new AppLauncher {
 
-      val appLauncher = new AppLauncher {
+          var lastState: Try[Base] = Failure(new PlayException("Not initialized", "?"))
 
-        var lastState: Try[Base] = Failure(new PlayException("Not initialized", "?"))
+          def current: Option[Base] = lastState.toOption
 
-        def current: Option[Base] = lastState.toOption
+          def get: Try[Base] = synchronized {
+            implicit val ec = scala.concurrent.ExecutionContext.global
+            Await.result(
+              Future {
 
-        def get: Try[Base] = synchronized {
-          reloaded.flatMap { maybeClassloader =>
-            val maybeBase: Option[Try[Base]] = maybeClassloader.map { projectClassloader =>
-              println("maybeBase!")
-              if (lastState.isSuccess) {
-                println()
-                println("--- (RELOAD) ---")
-                println()
-              }
+                val reloaded = buildLink.reload match {
+                  case NonFatal(t)     => Failure(t)
+                  case cl: ClassLoader => Success(Some(cl))
+                  case null            => Success(None)
+                }
 
-              // Stop the old one
-              lastState.foreach(_.stop())
+                reloaded.flatMap {
+                  maybeClassloader =>
+                    val maybeBase: Option[Try[Base]] = maybeClassloader.map {
+                      projectClassloader =>
+                        try {
 
-              val newApplication = Threads.withContextClassLoader(projectClassloader) {
-                val toInstantiate = projectClassloader.loadClass(clazz)
-                toInstantiate.newInstance().asInstanceOf[Base]
-              }
-              // Start the new one
-              newApplication.start()
+                          if (lastState.isSuccess) {
+                            println()
+                            println("--- (RELOAD) ---")
+                            println()
+                          }
 
-              Success(newApplication)
-            }
+                          // Stop the old one
+                          lastState.foreach(_.stop())
 
-            maybeBase.flatMap(_.toOption).foreach { app =>
-              lastState = Success(app)
-            }
+                          val newApplication =
+                            Threads.withContextClassLoader(projectClassloader) {
+                              System.out.println(projectClassloader)
+                              val toInstantiate = projectClassloader.loadClass(clazz)
+                              toInstantiate.newInstance().asInstanceOf[Base]
+                            }
 
-            maybeBase.getOrElse(lastState)
+                          System.out.println(s"$newApplication")
+                          // Start the new one
+                          newApplication.start(projectClassloader)
+
+                          Success(newApplication)
+                        } catch {
+                          case e: PlayException =>
+                            lastState = Failure(e)
+                            logExceptionAndGetResult(path, e)
+                            lastState
+
+                          case NonFatal(e) =>
+                            lastState = Failure(UnexpectedException(unexpected = Some(e)))
+                            logExceptionAndGetResult(path, e)
+                            lastState
+
+                          case e: LinkageError =>
+                            lastState = Failure(UnexpectedException(unexpected = Some(e)))
+                            logExceptionAndGetResult(path, e)
+                            lastState
+
+                        }
+                    }
+
+                    maybeBase.flatMap(_.toOption).foreach { app =>
+                      lastState = Success(app)
+                    }
+
+                    maybeBase.getOrElse(lastState)
+                }
+              },
+              Duration.Inf
+            )
+          }
+
+          private def logExceptionAndGetResult(path: File, e: Throwable, hint: String = ""): Unit = {
+            e.printStackTrace()
+            println()
+            println(
+              s"Stacktrace caused by project ${path.getName} (filesystem path to project is ${path.getAbsolutePath}).\n${hint}"
+            )
           }
         }
-      }
 
-      val ss = new ServerWithStop {
-        def mainAddress() = new InetSocketAddress(httpAddress, httpPort.get)
+        val ss = new ServerWithStop {
+          def mainAddress() = new InetSocketAddress(httpAddress, httpPort.get)
 
-        def stop() = appLauncher.lastState.foreach(_.stop())
-      }
-
-      new ReloadableServer(ss) {
-
-        /** Executes application's reloading. */
-        def reload() = {
-          appLauncher.get
+          def stop() = appLauncher.lastState.foreach(_.stop())
         }
+
+        new ReloadableServer(ss) {
+
+          /** Executes application's reloading. */
+          def reload() = {
+            appLauncher.get
+          }
+        }
+      } catch {
+        case e: ExceptionInInitializerError =>
+          e.printStackTrace()
+          throw e.getCause
       }
     }
   }

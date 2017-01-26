@@ -5,7 +5,7 @@ package com.dispalt.fwatch;
 
 public interface Base {
 
-    void start();
+    void start(ClassLoader cl);
 
     void stop();
 

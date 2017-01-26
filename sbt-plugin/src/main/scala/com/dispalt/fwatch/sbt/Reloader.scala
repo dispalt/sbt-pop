@@ -88,7 +88,7 @@ object Reloader {
       devSettings: Seq[(String, String)],
       httpPort: Int,
       reloadLock: AnyRef,
-      mainClass: String
+      spawnMainClass: String
   ): DevServer = {
     /*
      * We need to do a bit of classloader magic to run the Play application.
@@ -150,7 +150,7 @@ object Reloader {
     val server = {
       val mainClass = applicationLoader.loadClass("com.dispalt.server.FastWatchServerStart")
       val mainDev   = mainClass.getMethod("mainDevHttpMode", classOf[BuildLink], classOf[Int], classOf[String])
-      mainDev.invoke(null, reloader, httpPort: java.lang.Integer, "foo.Foo").asInstanceOf[ReloadableServer]
+      mainDev.invoke(null, reloader, httpPort: java.lang.Integer, spawnMainClass).asInstanceOf[ReloadableServer]
     }
 
     new DevServer {
@@ -326,6 +326,10 @@ class Reloader(
               // SBT has a quiet wait period, if that's set to true, sources were modified
               val triggered = newState.awaitingQuietPeriod
               watchState = newState
+
+              println(
+                s"triggered || shouldReload || currentApplicationClassLoader.isEmpty ${triggered || shouldReload || currentApplicationClassLoader.isEmpty}"
+              )
 
               if (triggered || shouldReload || currentApplicationClassLoader.isEmpty) {
                 // Create a new classloader
