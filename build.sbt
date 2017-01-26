@@ -1,12 +1,11 @@
 import de.heikoseeberger.sbtheader.HeaderPattern
 
-val ScalaTestVersion = "3.0.1"
+val ScalaTestVersion        = "3.0.1"
 val ScalaJava8CompatVersion = "0.7.0"
-val BetterFiles = "2.14.0"
+val BetterFiles             = "2.14.0"
 
-val scalaTest = "org.scalatest" %% "scalatest" % ScalaTestVersion
+val scalaTest        = "org.scalatest"          %% "scalatest"          % ScalaTestVersion
 val scalaJava8Compat = "org.scala-lang.modules" %% "scala-java8-compat" % ScalaJava8CompatVersion
-
 
 def common: Seq[Setting[_]] = releaseSettings ++ bintraySettings ++ Seq(
   organization := "com.dispalt.fwatch",
@@ -30,7 +29,6 @@ def common: Seq[Setting[_]] = releaseSettings ++ bintraySettings ++ Seq(
          |""".stripMargin
     )
   ),
-
   pomExtra := {
     <scm>
       <url>https://github.com/dispalt/fwatch</url>
@@ -44,21 +42,23 @@ def common: Seq[Setting[_]] = releaseSettings ++ bintraySettings ++ Seq(
         </developer>
       </developers>
   },
-  pomIncludeRepository := { _ => false },
-
+  pomIncludeRepository := { _ =>
+    false
+  },
   concurrentRestrictions in Global += Tags.limit(Tags.Test, 1),
-
   // Setting javac options in common allows IntelliJ IDEA to import them automatically
   javacOptions in compile ++= Seq(
-    "-encoding", "UTF-8",
-    "-source", "1.8",
-    "-target", "1.8",
+    "-encoding",
+    "UTF-8",
+    "-source",
+    "1.8",
+    "-target",
+    "1.8",
     "-parameters",
     "-Xlint:unchecked",
     "-Xlint:deprecation"
   )
 )
-
 
 def bintraySettings: Seq[Setting[_]] = Seq(
   bintrayOrganization := Some("dispalt"),
@@ -94,22 +94,26 @@ def runtimeLibCommon: Seq[Setting[_]] = common ++ Seq(
   scalaVersion := crossScalaVersions.value.head,
   crossVersion := CrossVersion.binary,
   crossPaths := false,
-
 //  dependencyOverrides += "com.typesafe.akka" %% "akka-actor" % AkkaVersion,
 //  dependencyOverrides += "com.typesafe.akka" %% "akka-slf4j" % AkkaVersion,
 
   // compile options
-  scalacOptions in Compile ++= Seq("-encoding", "UTF-8", "-target:jvm-1.8", "-feature", "-unchecked", "-Xlog-reflective-calls", "-Xlint", "-deprecation"),
-
+  scalacOptions in Compile ++= Seq("-encoding",
+                                   "UTF-8",
+                                   "-target:jvm-1.8",
+                                   "-feature",
+                                   "-unchecked",
+                                   "-Xlog-reflective-calls",
+                                   "-Xlint",
+                                   "-deprecation"),
   incOptions := incOptions.value.withNameHashing(true),
-
   // show full stack traces and test case durations
   testOptions in Test += Tests.Argument("-oDF")
 )
 
 // Publisher switching
 def RuntimeLibPlugins = AutomateHeaderPlugin && Sonatype && PluginsAccessor.exclude(BintrayPlugin)
-def SbtPluginPlugins = AutomateHeaderPlugin && BintrayPlugin && PluginsAccessor.exclude(Sonatype)
+def SbtPluginPlugins  = AutomateHeaderPlugin && BintrayPlugin && PluginsAccessor.exclude(Sonatype)
 
 val otherProjects = Seq[Project](
   `build-link`,
@@ -152,12 +156,17 @@ lazy val `sbt-plugin` = (project in file("sbt-plugin"))
   .settings(
     sbtPlugin := true,
     libraryDependencies ++= Seq(
-      scalaTest % Test,
+      scalaTest              % Test,
       "com.github.pathikrit" %% "better-files" % "2.14.0"
     ),
+    sourceGenerators in Compile += Def.task {
+      Generators.version(version.value, (sourceManaged in Compile).value)
+    }.taskValue,
     scriptedDependencies := {
       val () = scriptedDependencies.value
       val () = publishLocal.value
+      val () = (publishLocal in `build-link`).value
+      val () = (publishLocal in `reloadable-server`).value
     },
     publishTo := {
       if (isSnapshot.value) {
@@ -168,3 +177,17 @@ lazy val `sbt-plugin` = (project in file("sbt-plugin"))
     publishMavenStyle := isSnapshot.value
   )
   .dependsOn(`build-link`)
+
+def scriptedSettings: Seq[Setting[_]] =
+  ScriptedPlugin.scriptedSettings ++
+    Seq(scriptedLaunchOpts += s"-Dproject.version=${version.value}") ++
+    Seq(
+      scripted := scripted.tag(Tags.Test).evaluated,
+      scriptedLaunchOpts ++= Seq(
+        "-Xmx768m",
+        "-XX:MaxMetaspaceSize=384m",
+        "-Dscala.version=" + sys.props
+          .get("scripted.scala.version")
+          .getOrElse((scalaVersion in `reloadable-server`).value)
+      )
+    )

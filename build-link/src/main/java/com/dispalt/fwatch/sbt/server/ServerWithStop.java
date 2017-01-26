@@ -1,3 +1,6 @@
+/*
+ * Copyright (C) 2017 Dan Di Spaltro
+ */
 package com.dispalt.fwatch.sbt.server;
 
 public interface ServerWithStop {

@@ -1,3 +1,6 @@
+/*
+ * Copyright (C) 2017 Dan Di Spaltro
+ */
 package com.dispalt.fwatch.sbt
 
 import java.io.{ Closeable, File }
@@ -13,10 +16,14 @@ import java.util.concurrent.atomic.AtomicReference
 import jline.console.ConsoleReader
 import sbt._
 import sbt.Keys._
+import sbt.plugins.JvmPlugin
+import com.dispalt.fwatch.core.FastWatchVersion
 
 import scala.util.control.NonFatal
 
 object FastWatch extends AutoPlugin {
+
+  override def requires = JvmPlugin
 
   override def trigger = noTrigger
 
@@ -120,8 +127,17 @@ object FastWatch extends AutoPlugin {
           watchAndRun(watcher, w._3, w._2, w._1, log)
         }
         .joinWith(_.join)
-    }.value
+    }.value,
+    ivyConfigurations ++= Seq(Internal.Configs.DevRuntime),
+    manageClasspath(Internal.Configs.DevRuntime),
+    libraryDependencies +=
+      "com.dispalt.fwatch" %% "fw-reloadable-server" % FastWatchVersion.current % Internal.Configs.DevRuntime
   )
+
+  private def manageClasspath(config: Configuration) =
+    managedClasspath in config <<= (classpathTypes in config, update) map { (ct, report) =>
+      Classpaths.managedJars(config, ct, report)
+    }
 
   private def zipTogether(watchedProjects: Seq[(ProjectRef, TaskKey[_])],
                           monitoredProjectDirs: Seq[(ProjectRef, Seq[File])]) = {

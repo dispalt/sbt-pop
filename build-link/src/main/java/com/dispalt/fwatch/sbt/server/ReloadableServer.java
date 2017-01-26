@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2017 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2017 Dan Di Spaltro
  */
 package com.dispalt.fwatch.sbt.server;
 

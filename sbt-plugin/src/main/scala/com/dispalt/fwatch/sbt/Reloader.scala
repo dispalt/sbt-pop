@@ -1,11 +1,14 @@
+/*
+ * Copyright (C) 2017 Dan Di Spaltro
+ */
 package com.dispalt.fwatch.sbt
 
-import java.io.{Closeable, File}
+import java.io.{ Closeable, File }
 import java.net.URL
-import java.security.{AccessController, PrivilegedAction}
+import java.security.{ AccessController, PrivilegedAction }
 import java.time.Instant
 import java.util
-import java.util.{Timer, TimerTask}
+import java.util.{ Timer, TimerTask }
 import java.util.concurrent.atomic.AtomicReference
 
 import Reloader._
@@ -14,11 +17,11 @@ import scala.annotation.tailrec
 import scala.collection.JavaConverters._
 import sbt._
 import sbt.Keys._
-import better.files.{File => ScalaFile, _}
-import Watcher.autoImport._
+import better.files.{ File => ScalaFile, _ }
+import FastWatch.autoImport._
 import com.dispalt.fwatch.PlayException
 import com.dispalt.fwatch.core.BuildLink
-import com.dispalt.fwatch.sbt.PlayExceptions.{CompilationException, UnexpectedException}
+import com.dispalt.fwatch.sbt.PlayExceptions.{ CompilationException, UnexpectedException }
 import com.dispalt.fwatch.sbt.server.ReloadableServer
 
 object Reloader {
@@ -124,10 +127,12 @@ object Reloader {
       * buildLoader. Also accesses the reloader resources to make these available
       * to the applicationLoader, creating a full circle for resource loading.
       */
-    lazy val delegatingLoader: ClassLoader = new DelegatingClassLoader(parentClassLoader,
+    lazy val delegatingLoader: ClassLoader = new DelegatingClassLoader(
+      parentClassLoader,
       com.dispalt.fwatch.core.Build.sharedClasses.asScala.toSet,
-                                                                       buildLoader,
-                                                                       reloader.getClassLoader _)
+      buildLoader,
+      reloader.getClassLoader _
+    )
 
     lazy val applicationLoader =
       new NamedURLClassLoader("LagomDependencyClassLoader", urls(dependencyClasspath), delegatingLoader)
@@ -142,7 +147,7 @@ object Reloader {
                                      reloadLock)
 
     val server = {
-      val mainClass = applicationLoader.loadClass("com.j11ve.srv2.ReloadableDevServerStart")
+      val mainClass = applicationLoader.loadClass("com.dispalt.server.FastWatchServerStart")
       val mainDev   = mainClass.getMethod("mainDevHttpMode", classOf[BuildLink], classOf[Int])
       mainDev.invoke(null, reloader, httpPort: java.lang.Integer).asInstanceOf[ReloadableServer]
     }
@@ -541,7 +546,7 @@ object RunSupport {
         () => Project.runTask(streamsManager in scope, state).map(_._2).get.toEither.right.toOption
     )
 
-    val classpath = (externalDependencyClasspath in Runtime).value.files
+    val classpath = (devModeDependencies.value ++ (externalDependencyClasspath in Runtime).value).distinct.files
 
     Reloader.startDevMode(
       scalaInstance.value.loader,
@@ -555,6 +560,10 @@ object RunSupport {
       8080,
       RunSupport
     )
+  }
+
+  private def devModeDependencies = Def.task {
+    (managedClasspath in Internal.Configs.DevRuntime).value
   }
 
   def compile(reloadCompile: () => Result[sbt.inc.Analysis],
