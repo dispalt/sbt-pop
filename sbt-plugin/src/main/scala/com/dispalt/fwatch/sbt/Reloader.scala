@@ -489,8 +489,8 @@ object RunSupport {
 
     val reloadCompile = () =>
       RunSupport.compile(
-        () => Project.runTask(fwCompileEverything in scope, state).map(_._2).get,
-        () => Project.runTask(fwReloaderClasspath in scope, state).map(_._2).get,
+        () => Project.runTask(fastWatchCompileEverything in scope, state).map(_._2).get,
+        () => Project.runTask(fastWatchReloaderClasspath in scope, state).map(_._2).get,
         () => Project.runTask(streamsManager in scope, state).map(_._2).get.toEither.right.toOption
     )
 
@@ -501,9 +501,9 @@ object RunSupport {
       scalaInstance.value.loader,
       classpath,
       reloadCompile,
-      fwClassLoaderDecorator.value,
-      fwMonitoredProjectDirs.value.flatMap(_._2),
-      fwWatcherService.value,
+      fastWatchClassLoaderDecorator.value,
+      FastWatch.fastWatchMonitoredProjectDirs.value.flatMap(_._2),
+      fastWatchWatcherService.value,
       baseDirectory.value,
       extraConfigs.toSeq,
       8080,

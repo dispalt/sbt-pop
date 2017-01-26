@@ -32,49 +32,49 @@ object FastWatch extends AutoPlugin {
 
   object autoImport {
 
-    lazy val fwReloaderClasspath = taskKey[Classpath]("todo")
+    lazy val fastWatchReloaderClasspath = taskKey[Classpath]("todo")
 
-    lazy val fwClassLoaderDecorator = taskKey[ClassLoader => ClassLoader](
+    lazy val fastWatchClassLoaderDecorator = taskKey[ClassLoader => ClassLoader](
       "Function that decorates the Lagom classloader. Can be used to inject things into the classpath."
     )
 
     /**
-      * Don't really mess with this, it's internal
-      */
-    lazy val fwMonitoredProjectDirs = taskKey[Seq[(ProjectRef, Seq[File])]]("Pair the projects with the files.")
-
-    /**
       * Set the watched projects to things you care about, it defaults to compiling on change.
       */
-    lazy val fwWatchedProjects =
+    lazy val fastWatchWatchedProjects =
       taskKey[Seq[(ProjectRef, TaskKey[_])]]("Watch these projects, execute these tasks when they change.")
 
     /**
-      * Compiles all dependencies from the [[fwWatchedProjects]] sequence of tuples.  You probably don't need
+      * Compiles all dependencies from the [[fastWatchWatchedProjects]] sequence of tuples.  You probably don't need
       * to ever change this.
       */
-    lazy val fwCompileEverything =
+    lazy val fastWatchCompileEverything =
       taskKey[sbt.inc.Analysis]("Compiles this project and every project it depends on.")
 
     /**
       * This will most likely be able to be implemented differently.
       */
-    lazy val fwWatcherService = taskKey[JDK7FileWatchService]("JDK7 File watcher singleton.")
+    lazy val fastWatchWatcherService = taskKey[JDK7FileWatchService]("JDK7 File watcher singleton.")
 
     /**
-      * Override this if you need to do something at the beginning
+      * A convenience key to call when it's starting.
       */
-    lazy val fwStartHook = taskKey[Unit]("Start hook")
+    lazy val fastWatchStartHook = taskKey[Unit]("Start hook")
 
     /**
       * Override this if you need to stop something at the end.
       */
-    lazy val fwStopHook = taskKey[Unit]("Stop hook")
+    lazy val fastWatchStopHook = taskKey[Unit]("Stop hook")
   }
 
   lazy val runDevelop = taskKey[(String, DevServer)](
     "The main command to run at the command line to start watching the files in each project and react appropriately."
   )
+
+  /**
+    * Don't really mess with this, it's internal
+    */
+  lazy val fastWatchMonitoredProjectDirs = taskKey[Seq[(ProjectRef, Seq[File])]]("Pair the projects with the files.")
 
   import autoImport._
 
@@ -82,37 +82,41 @@ object FastWatch extends AutoPlugin {
     /**
       * Set the initial projects.
       */
-    fwStartHook := {},
-    fwStopHook := {},
-    fwClassLoaderDecorator := identity,
-    fwReloaderClasspath := Classpaths
+    fastWatchStartHook := {},
+    fastWatchStopHook := {},
+    fastWatchClassLoaderDecorator := identity,
+    fastWatchReloaderClasspath := Classpaths
       .concatDistinct(exportedProducts in Runtime, internalDependencyClasspath in Runtime)
       .value,
     Keys.run in Compile := {
-      val service = runDevelop.value
-      val log     = state.value.log
-      // TODO: Newer additions need more checking
-      // but for now, allow this to happen in parallel
-      val ()    = fwStartHook.value
-      val scope = resolvedScoped.value.scope
-      val st    = Keys.state.value
+      // Run this in order
+      Def
+        .sequential(
+          fastWatchStartHook,
+          runAndBlock,
+          fastWatchStopHook
+        )
+        .value
 
-      SbtConsoleHelper.printStartScreen(log, service)
-      SbtConsoleHelper.blockUntilExit(log, service._2)
-      Project.runTask(fwStopHook in scope, st)
+      println()
+      println("Run finished.")
+      println()
+    },
+    Internal.Keys.stop := {
+      val service = reloadRunTask.value
+      service.close()
     },
     mainClass in Keys.run := None,
     runDevelop := {
-      val service = runDevelopTask.value
-//      service.reload()
+      val service = reloadRunTask.value
       service.addChangeListener(() => service.reload())
       (name.value, service)
     },
-    fwWatchedProjects := Seq((thisProjectRef.value, compile in Compile)),
-    fwWatcherService := new JDK7FileWatchService(streams.value.log),
-    fwCompileEverything := Def.taskDyn {
+    fastWatchWatchedProjects := Seq((thisProjectRef.value, compile in Compile)),
+    fastWatchWatcherService := new JDK7FileWatchService(streams.value.log),
+    fastWatchCompileEverything := Def.taskDyn {
       val compileTask = compile in Compile
-      val watched     = fwWatchedProjects.value
+      val watched     = fastWatchWatchedProjects.value
       val sf = watched
         .map { p =>
           ScopeFilter(
@@ -125,9 +129,9 @@ object FastWatch extends AutoPlugin {
     }.value,
     // Monitored Dirs
     // Copied from PlayCommands.scala
-    fwMonitoredProjectDirs := Def.taskDyn {
+    fastWatchMonitoredProjectDirs := Def.taskDyn {
 
-      fwWatchedProjects.value
+      fastWatchWatchedProjects.value
         .map(_._1)
         .map { p =>
           filteredDirs(projectFilter(p)).map(lf => (p, lf))
@@ -144,7 +148,14 @@ object FastWatch extends AutoPlugin {
     )
   )
 
-  private lazy val runDevelopTask: Initialize[Task[DevServer]] = Def.taskDyn {
+  private lazy val runAndBlock: Initialize[Task[Unit]] = Def.task {
+    val service = runDevelop.value
+    val log     = state.value.log
+    SbtConsoleHelper.printStartScreen(log, service)
+    SbtConsoleHelper.blockUntilExit(log, service._2)
+  }
+
+  private lazy val reloadRunTask: Initialize[Task[DevServer]] = Def.taskDyn {
     RunSupport.reloadRunTask(Map.empty)
   }
 

@@ -1,5 +1,10 @@
 lazy val root = (project in file(".")).enablePlugins(FastWatch)
 
-scalaVersion := Option(System.getProperty("scala.version")).getOrElse("2.11.7")
+scalaVersion := Option(System.getProperty("scala.version")).getOrElse("2.11.8")
 
 mainClass in run := Some("foo.NewFoo")
+
+fastWatchStartHook := {
+  val log = streams.value.log
+  log.info("HELLLLOOO")
+}

@@ -1,6 +1,6 @@
 # Test it
 
-> runDevelop
+> run
 $ sleep 7000
 
 > stop
