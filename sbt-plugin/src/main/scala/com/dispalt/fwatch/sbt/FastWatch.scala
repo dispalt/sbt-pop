@@ -31,9 +31,6 @@ object FastWatch extends AutoPlugin {
   override def trigger = noTrigger
 
   object autoImport {
-    lazy val runDevelop = taskKey[(String, DevServer)](
-      "The main command to run at the command line to start watching the files in each project and react appropriately."
-    )
 
     lazy val fwReloaderClasspath = taskKey[Classpath]("todo")
 
@@ -53,7 +50,8 @@ object FastWatch extends AutoPlugin {
       taskKey[Seq[(ProjectRef, TaskKey[_])]]("Watch these projects, execute these tasks when they change.")
 
     /**
-      * Not used for now...
+      * Compiles all dependencies from the [[fwWatchedProjects]] sequence of tuples.  You probably don't need
+      * to ever change this.
       */
     lazy val fwCompileEverything =
       taskKey[sbt.inc.Analysis]("Compiles this project and every project it depends on.")
@@ -64,20 +62,19 @@ object FastWatch extends AutoPlugin {
     lazy val fwWatcherService = taskKey[JDK7FileWatchService]("JDK7 File watcher singleton.")
 
     /**
-      * All the watchers that are connected to the main watcher.
-      */
-    lazy val fwStartWatchers = taskKey[Seq[FileWatcher]]("File watcher")
-
-    /**
       * Override this if you need to do something at the beginning
       */
     lazy val fwStartHook = taskKey[Unit]("Start hook")
 
     /**
-      * Override this if you need to stop
+      * Override this if you need to stop something at the end.
       */
     lazy val fwStopHook = taskKey[Unit]("Stop hook")
   }
+
+  lazy val runDevelop = taskKey[(String, DevServer)](
+    "The main command to run at the command line to start watching the files in each project and react appropriately."
+  )
 
   import autoImport._
 
@@ -107,7 +104,7 @@ object FastWatch extends AutoPlugin {
     mainClass in Keys.run := None,
     runDevelop := {
       val service = runDevelopTask.value
-      service.reload()
+//      service.reload()
       service.addChangeListener(() => service.reload())
       (name.value, service)
     },
@@ -138,16 +135,6 @@ object FastWatch extends AutoPlugin {
         .joinWith(_.join)
 
     }.value,
-    fwStartWatchers := Def.taskDyn {
-      val wp      = zipTogether(fwWatchedProjects.value, fwMonitoredProjectDirs.value)
-      val watcher = fwWatcherService.value
-      val log     = streams.value.log
-
-      wp.map { w =>
-          watchAndRun(watcher, w._3, w._2, w._1, log)
-        }
-        .joinWith(_.join)
-    }.value,
     ivyConfigurations ++= Seq(Internal.Configs.DevRuntime),
     manageClasspath(Internal.Configs.DevRuntime),
     libraryDependencies ++= Seq(
@@ -166,30 +153,6 @@ object FastWatch extends AutoPlugin {
       val ct     = (classpathTypes in config).value
       val report = update.value
       Classpaths.managedJars(config, ct, report)
-    }
-
-  private def zipTogether(watchedProjects: Seq[(ProjectRef, TaskKey[_])],
-                          monitoredProjectDirs: Seq[(ProjectRef, Seq[File])]) = {
-    watchedProjects.zip(monitoredProjectDirs).map {
-      case ((p, tk), (_, files)) => (p, tk, files)
-    }
-  }
-
-  private def watchAndRun(
-      watcher: JDK7FileWatchService,
-      files: Seq[File],
-      task: TaskKey[_],
-      p: ProjectRef,
-      log: Logger
-  ) =
-    Def.task {
-      val state = Keys.state.value
-
-      watcher.watch(files, { () =>
-        log.info(s"'${p.project}' changed, running ${task.key}")
-        val Some((_, f)) = Project.runTask(task in p, state)
-      })
-
     }
 
   private def projectFilter(projectRef: ProjectRef) = ScopeFilter(
@@ -250,7 +213,7 @@ class JDK7FileWatchService(logger: Logger) {
         logger.warn(
           "This file will not be watched. Either remove the file from playMonitoredFiles, or configure a different WatchService, eg:"
         )
-        logger.warn("PlayKeys.fileWatchService := play.runsupport.FileWatchService.jnotify(target.value)")
+//        logger.warn("PlayKeys.fileWatchService := play.runsupport.FileWatchService.jnotify(target.value)")
         false
       } else false
     }

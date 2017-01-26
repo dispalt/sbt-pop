@@ -136,7 +136,7 @@ object Reloader {
     )
 
     lazy val applicationLoader =
-      new NamedURLClassLoader("LagomDependencyClassLoader", urls(dependencyClasspath), delegatingLoader)
+      new NamedURLClassLoader("FastWatchDependencyClassLoader", urls(dependencyClasspath), delegatingLoader)
     lazy val decoratedLoader = classLoaderDecorator(applicationLoader)
 
     lazy val reloader = new Reloader(reloadCompile,
@@ -153,6 +153,8 @@ object Reloader {
       mainDev.invoke(null, reloader, httpPort: java.lang.Integer, spawnMainClass).asInstanceOf[ReloadableServer]
     }
 
+    server.reload()
+
     new DevServer {
       val buildLink: BuildLink                   = reloader
       def addChangeListener(f: () => Unit): Unit = reloader.addChangeListener(f)
@@ -164,61 +166,6 @@ object Reloader {
       def url(): String = server.mainAddress().getHostName + ":" + server.mainAddress().getPort
     }
   }
-
-//  /**
-//    * Start the Lagom server without hot reloading
-//    */
-//  def startNoReload(parentClassLoader: ClassLoader,
-//                    dependencyClasspath: Seq[File],
-//                    buildProjectPath: File,
-//                    devSettings: Seq[(String, String)],
-//                    httpPort: Int): DevServer = {
-//    val buildLoader = this.getClass.getClassLoader
-//
-//    lazy val delegatingLoader: ClassLoader = new DelegatingClassLoader(
-//      parentClassLoader,
-//      play.core.Build.sharedClasses.asScala.toSet,
-//      buildLoader,
-//      () => Some(applicationLoader)
-//    )
-//    lazy val applicationLoader =
-//      new NamedURLClassLoader("LagomDependencyClassLoader", urls(dependencyClasspath), delegatingLoader)
-//
-//    val _buildLink = new BuildLink {
-//      private val initialized = new java.util.concurrent.atomic.AtomicBoolean(false)
-//      override def runTask(task: String): AnyRef =
-//        throw new UnsupportedOperationException("Run task not supported in Lagom")
-//      override def reload(): AnyRef = {
-//        if (initialized.compareAndSet(false, true)) applicationLoader
-//        else null // this means nothing to reload
-//      }
-//      override def projectPath(): File                                         = buildProjectPath
-//      override def settings(): util.Map[String, String]                        = devSettings.toMap.asJava
-//      override def forceReload(): Unit                                         = ()
-//      override def findSource(className: String, line: Integer): Array[AnyRef] = null
-//    }
-//
-//    val mainClass = applicationLoader.loadClass("play.core.server.LagomReloadableDevServerStart")
-//    val mainDev   = mainClass.getMethod("mainDevHttpMode", classOf[BuildLink], classOf[Int])
-//    val server    = mainDev.invoke(null, _buildLink, httpPort: java.lang.Integer).asInstanceOf[ReloadableServer]
-//
-//    server.reload() // it's important to initialize the server
-//
-//    new Reloader.DevServer {
-//      val buildLink: BuildLink = _buildLink
-//
-//      /** Allows to register a listener that will be triggered a monitored file is changed. */
-//      def addChangeListener(f: () => Unit): Unit = ()
-//
-//      /** Reloads the application.*/
-//      def reload(): Unit = ()
-//
-//      /** URL at which the application is running (if started) */
-//      def url(): String = server.mainAddress().getHostName + ":" + server.mainAddress().getPort
-//
-//      def close(): Unit = server.stop()
-//    }
-//  }
 
 }
 

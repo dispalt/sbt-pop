@@ -72,8 +72,13 @@ object FastWatchServerStart {
     Threads.withContextClassLoader(classLoader) {
       try {
 
-        System.out.println("\n---- Current ClassLoader ----\n")
-        System.out.println(this.getClass.getClassLoader)
+        if (System.getProperty("fastwatch.debug.classpath") == "true") {
+          System.out.println("\n---- Current ClassLoader ----\n")
+          System.out.println(this.getClass.getClassLoader)
+          System.out.println("\n---- The where is Scala? test ----\n")
+          System.out.println(this.getClass.getClassLoader.getResource("scala/Predef$.class"))
+        }
+
         val path: File = buildLink.projectPath
 
         val appLauncher = new AppLauncher {
