@@ -94,8 +94,15 @@ object FastWatch extends AutoPlugin {
     Keys.run in Compile := {
       val service = runDevelop.value
       val log     = state.value.log
+      // TODO: Newer additions need more checking
+      // but for now, allow this to happen in parallel
+      val ()    = fwStartHook.value
+      val scope = resolvedScoped.value.scope
+      val st    = Keys.state.value
+
       SbtConsoleHelper.printStartScreen(log, service)
       SbtConsoleHelper.blockUntilExit(log, service._2)
+      Project.runTask(fwStopHook in scope, st)
     },
     mainClass in Keys.run := None,
     runDevelop := {

@@ -327,10 +327,6 @@ class Reloader(
               val triggered = newState.awaitingQuietPeriod
               watchState = newState
 
-              println(
-                s"triggered || shouldReload || currentApplicationClassLoader.isEmpty ${triggered || shouldReload || currentApplicationClassLoader.isEmpty}"
-              )
-
               if (triggered || shouldReload || currentApplicationClassLoader.isEmpty) {
                 // Create a new classloader
                 val version = classLoaderVersion.incrementAndGet
@@ -559,7 +555,7 @@ object RunSupport {
       classpath,
       reloadCompile,
       fwClassLoaderDecorator.value,
-      fwMonitoredProjectDirs.value.filter(_._1 == thisProjectRef.value).flatMap(_._2),
+      fwMonitoredProjectDirs.value.flatMap(_._2),
       fwWatcherService.value,
       baseDirectory.value,
       extraConfigs.toSeq,

@@ -110,12 +110,10 @@ object FastWatchServerStart {
 
                           val newApplication =
                             Threads.withContextClassLoader(projectClassloader) {
-                              System.out.println(projectClassloader)
                               val toInstantiate = projectClassloader.loadClass(clazz)
                               toInstantiate.newInstance().asInstanceOf[Base]
                             }
 
-                          System.out.println(s"$newApplication")
                           // Start the new one
                           newApplication.start(projectClassloader)
 
