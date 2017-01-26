@@ -10,7 +10,7 @@ import java.security.{ AccessController, PrivilegedAction }
 import java.time.Instant
 import java.util
 import java.util.{ Timer, TimerTask }
-import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.{ Executors, LinkedBlockingQueue }
 import java.util.concurrent.atomic.AtomicReference
 
 import jline.console.ConsoleReader
@@ -18,7 +18,10 @@ import sbt._
 import sbt.Keys._
 import sbt.plugins.JvmPlugin
 import com.dispalt.fwatch.core.FastWatchVersion
+import com.dispalt.fwatch.sbt.Reloader.DevServer
+import sbt.Def.Initialize
 
+import scala.concurrent.{ Await, ExecutionContext }
 import scala.util.control.NonFatal
 
 object FastWatch extends AutoPlugin {
@@ -28,7 +31,7 @@ object FastWatch extends AutoPlugin {
   override def trigger = noTrigger
 
   object autoImport {
-    lazy val runDevelop = inputKey[Unit](
+    lazy val runDevelop = taskKey[(String, DevServer)](
       "The main command to run at the command line to start watching the files in each project and react appropriately."
     )
 
@@ -88,8 +91,18 @@ object FastWatch extends AutoPlugin {
     fwReloaderClasspath := Classpaths
       .concatDistinct(exportedProducts in Runtime, internalDependencyClasspath in Runtime)
       .value,
+    Keys.run in Compile := {
+      val service = runDevelop.value
+      val log     = state.value.log
+      SbtConsoleHelper.printStartScreen(log, service)
+      SbtConsoleHelper.blockUntilExit(log, service._2)
+    },
+    mainClass in Keys.run := None,
     runDevelop := {
-      RunSupport.reloadRunTask(Map.empty).value
+      val service = runDevelopTask.value
+      service.reload()
+      service.addChangeListener(() => service.reload())
+      (name.value, service)
     },
     fwWatchedProjects := Seq((thisProjectRef.value, compile in Compile)),
     fwWatcherService := new JDK7FileWatchService(streams.value.log),
@@ -130,12 +143,21 @@ object FastWatch extends AutoPlugin {
     }.value,
     ivyConfigurations ++= Seq(Internal.Configs.DevRuntime),
     manageClasspath(Internal.Configs.DevRuntime),
-    libraryDependencies +=
-      "com.dispalt.fwatch" %% "fw-reloadable-server" % FastWatchVersion.current % Internal.Configs.DevRuntime
+    libraryDependencies ++= Seq(
+      "com.dispalt.fwatch" %% "fw-reloadable-server" % FastWatchVersion.current % Internal.Configs.DevRuntime,
+      // TODO: Not sure I should really do this.
+      "com.dispalt.fwatch" % "build-link" % FastWatchVersion.current
+    )
   )
 
+  private lazy val runDevelopTask: Initialize[Task[DevServer]] = Def.taskDyn {
+    RunSupport.reloadRunTask(Map.empty)
+  }
+
   private def manageClasspath(config: Configuration) =
-    managedClasspath in config <<= (classpathTypes in config, update) map { (ct, report) =>
+    managedClasspath in config := {
+      val ct     = (classpathTypes in config).value
+      val report = update.value
       Classpaths.managedJars(config, ct, report)
     }
 
@@ -294,5 +316,18 @@ class JDK7FileWatchService(logger: Logger) {
 
   private def allSubDirectories(dirs: Seq[File]) = {
     (dirs ** (DirectoryFilter -- HiddenFileFilter)).get.distinct
+  }
+}
+
+private[sbt] object SbtConsoleHelper {
+  private val consoleHelper = new ConsoleHelper(new Colors("sbt.log.noformat"))
+  def printStartScreen(log: Logger, services: (String, DevServer)*): Unit =
+    consoleHelper.printStartScreen(log, services.map {
+      case (name, service) => name -> service.url()
+    })
+
+  def blockUntilExit(log: Logger, services: Closeable*): Unit = {
+    consoleHelper.blockUntilExit()
+    consoleHelper.shutdownAsynchronously(log, services)
   }
 }

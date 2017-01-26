@@ -1,1 +1,1 @@
-addSbtPlugin("com.dispalt.fwatch" % "fw-sbt-plugin" % sys.props("project.version"))
+addSbtPlugin("com.dispalt.fwatch" % "sbt-fastwatch" % sys.props("project.version"))

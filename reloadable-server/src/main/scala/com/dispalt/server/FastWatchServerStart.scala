@@ -4,8 +4,9 @@
 package com.dispalt.server
 
 import java.io.File
+import java.net.{ InetAddress, InetSocketAddress }
 
-import com.dispalt.fwatch.PlayException
+import com.dispalt.fwatch.{ Base, PlayException }
 import com.dispalt.fwatch.core.BuildLink
 import com.dispalt.fwatch.sbt.server.{ ReloadableServer, ServerWithStop }
 
@@ -44,23 +45,94 @@ case class UnexpectedException(message: Option[String] = None, unexpected: Optio
       unexpected.orNull
     )
 
+trait AppLauncher {
+  var lastState: Try[Base]
+  def current: Option[Base]
+  def get: Try[Base]
+}
+
 object FastWatchServerStart {
 
   def mainDevHttpMode(
       buildLink: BuildLink,
-      httpPort: Int
+      httpPort: Int,
+      clazz: String
   ): ReloadableServer = {
-    mainDev(buildLink, Some(httpPort), None, "0.0.0.0")
+    mainDev(buildLink, Some(httpPort), None, "0.0.0.0", clazz)
   }
 
   private def mainDev(
       buildLink: BuildLink,
       httpPort: Option[Int],
       httpsPort: Option[Int],
-      httpAddress: String
+      httpAddress: String,
+      clazz: String
   ): ReloadableServer = {
     val classLoader = getClass.getClassLoader
     Threads.withContextClassLoader(classLoader) {
+
+      System.out.println("\n---- Current ClassLoader ----\n")
+      System.out.println(this.getClass.getClassLoader)
+
+      val reloaded = buildLink.reload match {
+        case NonFatal(t)     => Failure(t)
+        case cl: ClassLoader => Success(Some(cl))
+        case null            => Success(None)
+      }
+
+      val appLauncher = new AppLauncher {
+
+        var lastState: Try[Base] = Failure(new PlayException("Not initialized", "?"))
+
+        def current: Option[Base] = lastState.toOption
+
+        def get: Try[Base] = synchronized {
+          reloaded.flatMap { maybeClassloader =>
+            val maybeBase: Option[Try[Base]] = maybeClassloader.map { projectClassloader =>
+              println("maybeBase!")
+              if (lastState.isSuccess) {
+                println()
+                println("--- (RELOAD) ---")
+                println()
+              }
+
+              // Stop the old one
+              lastState.foreach(_.stop())
+
+              val newApplication = Threads.withContextClassLoader(projectClassloader) {
+                val toInstantiate = projectClassloader.loadClass(clazz)
+                toInstantiate.newInstance().asInstanceOf[Base]
+              }
+              // Start the new one
+              newApplication.start()
+
+              Success(newApplication)
+            }
+
+            maybeBase.flatMap(_.toOption).foreach { app =>
+              lastState = Success(app)
+            }
+
+            maybeBase.getOrElse(lastState)
+          }
+        }
+      }
+
+      val ss = new ServerWithStop {
+        def mainAddress() = new InetSocketAddress(httpAddress, httpPort.get)
+
+        def stop() = appLauncher.lastState.foreach(_.stop())
+      }
+
+      new ReloadableServer(ss) {
+
+        /** Executes application's reloading. */
+        def reload() = {
+          appLauncher.get
+        }
+      }
+    }
+  }
 //      try {
 //        val process    = new RealServerProcess(args = Seq.empty)
 //        val path: File = buildLink.projectPath
@@ -86,16 +158,16 @@ object FastWatchServerStart {
 //          case NonFatal(_) =>
 //        }
 //
-////        // Configure the logger for the first time.
-////        // This is usually done by Application itself when it's instantiated, which for other types of ApplicationProviders,
-////        // is usually instantiated along with or before the provider.  But in dev mode, no application exists initially, so
-////        // configure it here.
-////        LoggerConfigurator(classLoader) match {
-////          case Some(loggerConfigurator) =>
-////            loggerConfigurator.init(path, Mode.Dev)
-////          case None =>
-////            println("No play.logger.configurator found: logging must be configured entirely by the application.")
-////        }
+//        // Configure the logger for the first time.
+//        // This is usually done by Application itself when it's instantiated, which for other types of ApplicationProviders,
+//        // is usually instantiated along with or before the provider.  But in dev mode, no application exists initially, so
+//        // configure it here.
+//        LoggerConfigurator(classLoader) match {
+//          case Some(loggerConfigurator) =>
+//            loggerConfigurator.init(path, Mode.Dev)
+//          case None =>
+//            println("No play.logger.configurator found: logging must be configured entirely by the application.")
+//        }
 //
 //        // Create reloadable ApplicationProvider
 //        val appProvider = new ApplicationProvider {
@@ -254,22 +326,4 @@ object FastWatchServerStart {
 //        case e: ExceptionInInitializerError => throw e.getCause
 //      }
 
-      val ss = new ServerWithStop {
-        def mainAddress() = null
-
-        /**
-          * Stop the server.
-          */
-        def stop() = ???
-      }
-      println("RELOADABLE SERVER")
-      new ReloadableServer(ss) {
-
-        /** Executes application's reloading. */
-        def reload() = {
-          println("HELLO")
-        }
-      }
-    }
-  }
 }

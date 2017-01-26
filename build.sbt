@@ -149,7 +149,7 @@ lazy val `reloadable-server` = (project in file("reloadable-server"))
   .dependsOn(`build-link`)
 
 lazy val `sbt-plugin` = (project in file("sbt-plugin"))
-  .settings(name := "fw-sbt-plugin")
+  .settings(name := "sbt-fastwatch")
   .settings(common: _*)
   .settings(scriptedSettings: _*)
   .enablePlugins(SbtPluginPlugins)
@@ -183,6 +183,7 @@ def scriptedSettings: Seq[Setting[_]] =
     Seq(scriptedLaunchOpts += s"-Dproject.version=${version.value}") ++
     Seq(
       scripted := scripted.tag(Tags.Test).evaluated,
+      scriptedBufferLog := false,
       scriptedLaunchOpts ++= Seq(
         "-Xmx768m",
         "-XX:MaxMetaspaceSize=384m",

@@ -87,7 +87,8 @@ object Reloader {
       projectPath: File,
       devSettings: Seq[(String, String)],
       httpPort: Int,
-      reloadLock: AnyRef
+      reloadLock: AnyRef,
+      mainClass: String
   ): DevServer = {
     /*
      * We need to do a bit of classloader magic to run the Play application.
@@ -148,8 +149,8 @@ object Reloader {
 
     val server = {
       val mainClass = applicationLoader.loadClass("com.dispalt.server.FastWatchServerStart")
-      val mainDev   = mainClass.getMethod("mainDevHttpMode", classOf[BuildLink], classOf[Int])
-      mainDev.invoke(null, reloader, httpPort: java.lang.Integer).asInstanceOf[ReloadableServer]
+      val mainDev   = mainClass.getMethod("mainDevHttpMode", classOf[BuildLink], classOf[Int], classOf[String])
+      mainDev.invoke(null, reloader, httpPort: java.lang.Integer, "foo.Foo").asInstanceOf[ReloadableServer]
     }
 
     new DevServer {
@@ -547,6 +548,7 @@ object RunSupport {
     )
 
     val classpath = (devModeDependencies.value ++ (externalDependencyClasspath in Runtime).value).distinct.files
+    val mc        = (mainClass in Keys.run).value.getOrElse(sys.error("Missing (mainClass in run) not set."))
 
     Reloader.startDevMode(
       scalaInstance.value.loader,
@@ -558,7 +560,8 @@ object RunSupport {
       baseDirectory.value,
       extraConfigs.toSeq,
       8080,
-      RunSupport
+      RunSupport,
+      mc
     )
   }
 
