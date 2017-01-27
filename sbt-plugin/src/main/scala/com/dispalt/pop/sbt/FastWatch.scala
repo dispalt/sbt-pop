@@ -65,6 +65,11 @@ object FastWatch extends AutoPlugin {
       * Override this if you need to stop something at the end.
       */
     lazy val popStopHook = taskKey[Unit]("Stop hook")
+
+    /**
+      * Set the port, not useful yet, but we could use it to do interesting socket handover stuff in the future.
+      */
+    lazy val popPort = settingKey[Int]("Set the port which get's passed down to the service.")
   }
 
   lazy val runDevelop = taskKey[(String, DevServer)](
@@ -278,7 +283,7 @@ class JDK7FileWatchService(logger: Logger) {
           }
         }
       },
-      "sbt-watcher-watch-service"
+      "sbt-pop-watch-service"
     )
     thread.setDaemon(true)
     thread.start()

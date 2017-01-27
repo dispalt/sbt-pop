@@ -506,7 +506,7 @@ object RunSupport {
       popWatcherService.value,
       baseDirectory.value,
       extraConfigs.toSeq,
-      8080,
+      popPort.value,
       RunSupport,
       mc
     )
