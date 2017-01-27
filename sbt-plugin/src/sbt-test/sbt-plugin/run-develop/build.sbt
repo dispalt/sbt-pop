@@ -4,7 +4,7 @@ scalaVersion := Option(System.getProperty("scala.version")).getOrElse("2.11.8")
 
 mainClass in run := Some("foo.NewFoo")
 
-fastWatchStartHook := {
+popStartHook := {
   val log = streams.value.log
   log.info("HELLLLOOO")
 }

@@ -1,55 +1,18 @@
 /*
  * Copyright (C) 2017 Dan Di Spaltro
  */
-package com.dispalt.server
+package com.dispalt.pop
 
 import java.io.File
-import java.net.{ InetAddress, InetSocketAddress }
+import java.net.InetSocketAddress
 
-import com.dispalt.fwatch.{ Base, PlayException }
-import com.dispalt.fwatch.core.BuildLink
-import com.dispalt.fwatch.sbt.server.{ ReloadableServer, ServerWithStop }
+import com.dispalt.pop.core.BuildLink
+import com.dispalt.pop.sbt.server.{ ReloadableServer, ServerWithStop }
 
-import scala.collection.JavaConverters._
-import scala.concurrent.{ Await, Future }
 import scala.concurrent.duration.Duration
-import scala.util.{ Failure, Success, Try }
+import scala.concurrent.{ Await, Future }
 import scala.util.control.NonFatal
-
-object Threads {
-
-  /**
-    * executes given function in the context of the provided classloader
-    * @param classloader that should be used to execute given function
-    * @param b function to be executed
-    */
-  def withContextClassLoader[T](classloader: ClassLoader)(b: => T): T = {
-    val thread    = Thread.currentThread
-    val oldLoader = thread.getContextClassLoader
-    try {
-      thread.setContextClassLoader(classloader)
-      b
-    } finally {
-      thread.setContextClassLoader(oldLoader)
-    }
-  }
-
-}
-
-case class UnexpectedException(message: Option[String] = None, unexpected: Option[Throwable] = None)
-    extends PlayException(
-      "Unexpected exception",
-      message.getOrElse {
-        unexpected.map(t => "%s: %s".format(t.getClass.getSimpleName, t.getMessage)).getOrElse("")
-      },
-      unexpected.orNull
-    )
-
-trait AppLauncher {
-  var lastState: Try[Base]
-  def current: Option[Base]
-  def get: Try[Base]
-}
+import scala.util.{ Failure, Success, Try }
 
 object FastWatchServerStart {
 
@@ -69,6 +32,7 @@ object FastWatchServerStart {
       clazz: String
   ): ReloadableServer = {
     val classLoader = getClass.getClassLoader
+    val port        = httpPort.orElse(httpsPort).getOrElse(8080)
     Threads.withContextClassLoader(classLoader) {
       try {
 
@@ -119,8 +83,8 @@ object FastWatchServerStart {
                               toInstantiate.newInstance().asInstanceOf[Base]
                             }
 
-                          // Start the new one
-                          newApplication.start(projectClassloader)
+                          // Starcleant the new one
+                          newApplication.start(projectClassloader, port)
 
                           Success(newApplication)
                         } catch {

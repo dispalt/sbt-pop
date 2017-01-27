@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2017 Dan Di Spaltro
  */
-package com.dispalt.fwatch.sbt
+package com.dispalt.pop.sbt
 
 import java.io.{ Closeable, File }
 import java.net.URL
@@ -17,8 +17,8 @@ import jline.console.ConsoleReader
 import sbt._
 import sbt.Keys._
 import sbt.plugins.JvmPlugin
-import com.dispalt.fwatch.core.FastWatchVersion
-import com.dispalt.fwatch.sbt.Reloader.DevServer
+import com.dispalt.pop.core.FastWatchVersion
+import com.dispalt.pop.sbt.Reloader.DevServer
 import sbt.Def.Initialize
 
 import scala.concurrent.{ Await, ExecutionContext }
@@ -32,39 +32,39 @@ object FastWatch extends AutoPlugin {
 
   object autoImport {
 
-    lazy val fastWatchReloaderClasspath = taskKey[Classpath]("todo")
+    lazy val popReloaderClasspath = taskKey[Classpath]("todo")
 
-    lazy val fastWatchClassLoaderDecorator = taskKey[ClassLoader => ClassLoader](
+    lazy val popClassLoaderDecorator = taskKey[ClassLoader => ClassLoader](
       "Function that decorates the Lagom classloader. Can be used to inject things into the classpath."
     )
 
     /**
       * Set the watched projects to things you care about, it defaults to compiling on change.
       */
-    lazy val fastWatchWatchedProjects =
+    lazy val popWatchedProjects =
       taskKey[Seq[(ProjectRef, TaskKey[_])]]("Watch these projects, execute these tasks when they change.")
 
     /**
-      * Compiles all dependencies from the [[fastWatchWatchedProjects]] sequence of tuples.  You probably don't need
+      * Compiles all dependencies from the [[popWatchedProjects]] sequence of tuples.  You probably don't need
       * to ever change this.
       */
-    lazy val fastWatchCompileEverything =
+    lazy val popCompileEverything =
       taskKey[sbt.inc.Analysis]("Compiles this project and every project it depends on.")
 
     /**
       * This will most likely be able to be implemented differently.
       */
-    lazy val fastWatchWatcherService = taskKey[JDK7FileWatchService]("JDK7 File watcher singleton.")
+    lazy val popWatcherService = taskKey[JDK7FileWatchService]("JDK7 File watcher singleton.")
 
     /**
       * A convenience key to call when it's starting.
       */
-    lazy val fastWatchStartHook = taskKey[Unit]("Start hook")
+    lazy val popStartHook = taskKey[Unit]("Start hook")
 
     /**
       * Override this if you need to stop something at the end.
       */
-    lazy val fastWatchStopHook = taskKey[Unit]("Stop hook")
+    lazy val popStopHook = taskKey[Unit]("Stop hook")
   }
 
   lazy val runDevelop = taskKey[(String, DevServer)](
@@ -82,19 +82,19 @@ object FastWatch extends AutoPlugin {
     /**
       * Set the initial projects.
       */
-    fastWatchStartHook := {},
-    fastWatchStopHook := {},
-    fastWatchClassLoaderDecorator := identity,
-    fastWatchReloaderClasspath := Classpaths
+    popStartHook := {},
+    popStopHook := {},
+    popClassLoaderDecorator := identity,
+    popReloaderClasspath := Classpaths
       .concatDistinct(exportedProducts in Runtime, internalDependencyClasspath in Runtime)
       .value,
     Keys.run in Compile := {
       // Run this in order
       Def
         .sequential(
-          fastWatchStartHook,
+          popStartHook,
           runAndBlock,
-          fastWatchStopHook
+          popStopHook
         )
         .value
 
@@ -112,11 +112,11 @@ object FastWatch extends AutoPlugin {
       service.addChangeListener(() => service.reload())
       (name.value, service)
     },
-    fastWatchWatchedProjects := Seq((thisProjectRef.value, compile in Compile)),
-    fastWatchWatcherService := new JDK7FileWatchService(streams.value.log),
-    fastWatchCompileEverything := Def.taskDyn {
+    popWatchedProjects := Seq((thisProjectRef.value, compile in Compile)),
+    popWatcherService := new JDK7FileWatchService(streams.value.log),
+    popCompileEverything := Def.taskDyn {
       val compileTask = compile in Compile
-      val watched     = fastWatchWatchedProjects.value
+      val watched     = popWatchedProjects.value
       val sf = watched
         .map { p =>
           ScopeFilter(
@@ -131,7 +131,7 @@ object FastWatch extends AutoPlugin {
     // Copied from PlayCommands.scala
     fastWatchMonitoredProjectDirs := Def.taskDyn {
 
-      fastWatchWatchedProjects.value
+      popWatchedProjects.value
         .map(_._1)
         .map { p =>
           filteredDirs(projectFilter(p)).map(lf => (p, lf))
@@ -142,9 +142,9 @@ object FastWatch extends AutoPlugin {
     ivyConfigurations ++= Seq(Internal.Configs.DevRuntime),
     manageClasspath(Internal.Configs.DevRuntime),
     libraryDependencies ++= Seq(
-      "com.dispalt.fwatch" %% "fw-reloadable-server" % FastWatchVersion.current % Internal.Configs.DevRuntime,
+      "com.dispalt.pop" %% "pop-reloadable-server" % FastWatchVersion.current % Internal.Configs.DevRuntime,
       // TODO: Not sure I should really do this.
-      "com.dispalt.fwatch" % "build-link" % FastWatchVersion.current
+      "com.dispalt.pop" % "build-link" % FastWatchVersion.current
     )
   )
 

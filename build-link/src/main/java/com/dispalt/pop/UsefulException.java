@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2017 Dan Di Spaltro
  */
-package com.dispalt.fwatch;
+package com.dispalt.pop;
 
 /**
  * A UsefulException is something useful to display in the User browser.

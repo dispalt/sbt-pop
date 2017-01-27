@@ -1,11 +1,11 @@
 /*
  * Copyright (C) 2017 Dan Di Spaltro
  */
-package com.dispalt.fwatch.core;
+package com.dispalt.pop.core;
 
-import com.dispalt.fwatch.PlayException;
-import com.dispalt.fwatch.UsefulException;
-import com.dispalt.fwatch.sbt.server.ServerWithStop;
+import com.dispalt.pop.PlayException;
+import com.dispalt.pop.UsefulException;
+import com.dispalt.pop.sbt.server.ServerWithStop;
 
 import java.util.Collections;
 import java.util.ArrayList;
@@ -25,7 +25,7 @@ public class Build {
     list.add(PlayException.RichDescription.class.getName());
     list.add(PlayException.ExceptionSource.class.getName());
     list.add(PlayException.ExceptionAttachment.class.getName());
-    list.add(com.dispalt.fwatch.sbt.server.ReloadableServer.class.getName());
+    list.add(com.dispalt.pop.sbt.server.ReloadableServer.class.getName());
     sharedClasses = Collections.unmodifiableList(list);
   }
 

@@ -8,7 +8,7 @@ val scalaTest        = "org.scalatest"          %% "scalatest"          % ScalaT
 val scalaJava8Compat = "org.scala-lang.modules" %% "scala-java8-compat" % ScalaJava8CompatVersion
 
 def common: Seq[Setting[_]] = releaseSettings ++ bintraySettings ++ Seq(
-  organization := "com.dispalt.fwatch",
+  organization := "com.dispalt.pop",
   // Must be "Apache-2.0", because bintray requires that it is a license that it knows about
   licenses := Seq(("Apache-2.0", url("http://www.apache.org/licenses/LICENSE-2.0.html"))),
   homepage := Some(url("http://www.github.com/fwatch")),
@@ -122,7 +122,7 @@ val otherProjects = Seq[Project](
 )
 
 lazy val root = (project in file("."))
-  .settings(name := "fwatch")
+  .settings(name := "pop")
   .settings(
     PgpKeys.publishSigned := {},
     publishLocal := {},
@@ -143,13 +143,13 @@ lazy val `build-link` = (project in file("build-link"))
   )
 
 lazy val `reloadable-server` = (project in file("reloadable-server"))
-  .settings(name := "fw-reloadable-server")
+  .settings(name := "pop-reloadable-server")
   .settings(runtimeLibCommon: _*)
   .enablePlugins(RuntimeLibPlugins)
   .dependsOn(`build-link`)
 
 lazy val `sbt-plugin` = (project in file("sbt-plugin"))
-  .settings(name := "sbt-fastwatch")
+  .settings(name := "sbt-pop")
   .settings(common: _*)
   .settings(scriptedSettings: _*)
   .enablePlugins(SbtPluginPlugins)

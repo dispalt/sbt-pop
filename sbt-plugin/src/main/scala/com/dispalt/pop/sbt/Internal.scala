@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2017 Dan Di Spaltro
  */
-package com.dispalt.fwatch.sbt
+package com.dispalt.pop.sbt
 
 import sbt._
 

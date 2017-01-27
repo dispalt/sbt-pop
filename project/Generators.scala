@@ -5,7 +5,7 @@ object Generators {
   def version(lagomVersion: String, dir: File): Seq[File] = {
     val file = dir / "com" / "dispalt" / "fwatch" / "core" / "FastWatchVersion.scala"
     val scalaSource =
-      """|package com.dispalt.fwatch.core
+      """|package com.dispalt.pop.core
          |
          |object FastWatchVersion {
          |    val current = "%s"

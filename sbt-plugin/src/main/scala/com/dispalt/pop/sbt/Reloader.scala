@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2017 Dan Di Spaltro
  */
-package com.dispalt.fwatch.sbt
+package com.dispalt.pop.sbt
 
 import java.io.{ Closeable, File }
 import java.net.URL
@@ -19,10 +19,10 @@ import sbt._
 import sbt.Keys._
 import better.files.{ File => ScalaFile, _ }
 import FastWatch.autoImport._
-import com.dispalt.fwatch.PlayException
-import com.dispalt.fwatch.core.BuildLink
-import com.dispalt.fwatch.sbt.PlayExceptions.{ CompilationException, UnexpectedException }
-import com.dispalt.fwatch.sbt.server.ReloadableServer
+import com.dispalt.pop.sbt.PlayExceptions.{ CompilationException, UnexpectedException }
+import com.dispalt.pop.PlayException
+import com.dispalt.pop.core.BuildLink
+import com.dispalt.pop.sbt.server.ReloadableServer
 
 object Reloader {
 
@@ -130,7 +130,7 @@ object Reloader {
       */
     lazy val delegatingLoader: ClassLoader = new DelegatingClassLoader(
       parentClassLoader,
-      com.dispalt.fwatch.core.Build.sharedClasses.asScala.toSet,
+      com.dispalt.pop.core.Build.sharedClasses.asScala.toSet,
       buildLoader,
       reloader.getClassLoader _
     )
@@ -148,7 +148,7 @@ object Reloader {
                                      reloadLock)
 
     val server = {
-      val mainClass = applicationLoader.loadClass("com.dispalt.server.FastWatchServerStart")
+      val mainClass = applicationLoader.loadClass("com.dispalt.pop.FastWatchServerStart")
       val mainDev   = mainClass.getMethod("mainDevHttpMode", classOf[BuildLink], classOf[Int], classOf[String])
       mainDev.invoke(null, reloader, httpPort: java.lang.Integer, spawnMainClass).asInstanceOf[ReloadableServer]
     }
@@ -489,8 +489,8 @@ object RunSupport {
 
     val reloadCompile = () =>
       RunSupport.compile(
-        () => Project.runTask(fastWatchCompileEverything in scope, state).map(_._2).get,
-        () => Project.runTask(fastWatchReloaderClasspath in scope, state).map(_._2).get,
+        () => Project.runTask(popCompileEverything in scope, state).map(_._2).get,
+        () => Project.runTask(popReloaderClasspath in scope, state).map(_._2).get,
         () => Project.runTask(streamsManager in scope, state).map(_._2).get.toEither.right.toOption
     )
 
@@ -501,9 +501,9 @@ object RunSupport {
       scalaInstance.value.loader,
       classpath,
       reloadCompile,
-      fastWatchClassLoaderDecorator.value,
+      popClassLoaderDecorator.value,
       FastWatch.fastWatchMonitoredProjectDirs.value.flatMap(_._2),
-      fastWatchWatcherService.value,
+      popWatcherService.value,
       baseDirectory.value,
       extraConfigs.toSeq,
       8080,

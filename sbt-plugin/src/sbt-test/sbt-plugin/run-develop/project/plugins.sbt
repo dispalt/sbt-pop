@@ -1,1 +1,1 @@
-addSbtPlugin("com.dispalt.fwatch" % "sbt-fastwatch" % sys.props("project.version"))
+addSbtPlugin("com.dispalt.pop" % "sbt-pop" % sys.props("project.version"))

@@ -1,9 +1,9 @@
 package foo
 
-import com.dispalt.fwatch.Base
+import com.dispalt.pop.Base
 
 class NewFoo extends Base {
-  def start(cl: ClassLoader) = println("start")
-  def stop()                 = println("stop")
-  def restart()              = println("restart")
+  def start(cl: ClassLoader, port: Int) = println("start")
+  def stop()                            = println("stop")
+  def restart()                         = println("restart")
 }
