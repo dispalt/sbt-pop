@@ -40,4 +40,4 @@ to use the provided `ClassLoader` when dealing with `ConfigFactory.load`
 ## Similar Solutions
 
 * [sbt-revolver](https://github.com/spray/sbt-revolver) - Forks and runs
-* [play](https://github.com/playframework/playframework) - Very sophisticated class reloader.
+* [play](https://github.com/playframework/playframework) - Great reload experience
