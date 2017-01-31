@@ -89,6 +89,7 @@ object FastWatch extends AutoPlugin {
       */
     popStartHook := {},
     popStopHook := {},
+    popPort := 9000,
     popClassLoaderDecorator := identity,
     popReloaderClasspath := Classpaths
       .concatDistinct(exportedProducts in Runtime, internalDependencyClasspath in Runtime)

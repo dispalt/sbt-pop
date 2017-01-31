@@ -11,7 +11,7 @@ def common: Seq[Setting[_]] = releaseSettings ++ bintraySettings ++ Seq(
   organization := "com.dispalt.pop",
   // Must be "Apache-2.0", because bintray requires that it is a license that it knows about
   licenses := Seq(("Apache-2.0", url("http://www.apache.org/licenses/LICENSE-2.0.html"))),
-  homepage := Some(url("http://www.github.com/fwatch")),
+  homepage := Some(url("http://www.github.com/sbt-pop")),
   sonatypeProfileName := "com.lightbend",
   headers := headers.value ++ Map(
     "scala" -> (
@@ -31,8 +31,8 @@ def common: Seq[Setting[_]] = releaseSettings ++ bintraySettings ++ Seq(
   ),
   pomExtra := {
     <scm>
-      <url>https://github.com/dispalt/fwatch</url>
-      <connection>scm:git:git@github.com:dispalt/fwatch.git</connection>
+      <url>https://github.com/dispalt/sbt-pop</url>
+      <connection>scm:git:git@github.com:dispalt/sbt-pop.git</connection>
     </scm>
       <developers>
         <developer>
@@ -62,8 +62,8 @@ def common: Seq[Setting[_]] = releaseSettings ++ bintraySettings ++ Seq(
 
 def bintraySettings: Seq[Setting[_]] = Seq(
   bintrayOrganization := Some("dispalt"),
-  bintrayRepository := "sbt-plugin-releases",
-  bintrayPackage := "fwatch-sbt-plugin",
+  bintrayRepository := "sbt-plugins",
+  bintrayPackage := "sbt-pop",
   bintrayReleaseOnPublish := false
 )
 
