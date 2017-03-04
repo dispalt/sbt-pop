@@ -15,7 +15,7 @@ which supplies the application classloader with the `start` method.
 ## How to
 * Add the plugin to your `plugins.sbt` file in your project. 
 This brings in `build-link` runtime dependency which does not require scala.
-* In the sbt project you want to use it, you'll have to call `.enablePlugins(FastWatch)`.
+* In the sbt project you want to use it, you'll have to call `.enablePlugins(PopPlugin)`.
 and also set the `mainClass in run := Some("your.main.class.NOT.OBJECT.which.inherits.from.Base")`.
 * You can also watch extra projects like so:
 

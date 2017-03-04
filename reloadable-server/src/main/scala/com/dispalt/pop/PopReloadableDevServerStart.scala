@@ -14,7 +14,7 @@ import scala.concurrent.{ Await, Future }
 import scala.util.control.NonFatal
 import scala.util.{ Failure, Success, Try }
 
-object FastWatchServerStart {
+object PopReloadableDevServerStart {
 
   def mainDevHttpMode(
       buildLink: BuildLink,
@@ -36,7 +36,7 @@ object FastWatchServerStart {
     Threads.withContextClassLoader(classLoader) {
       try {
 
-        if (System.getProperty("fastwatch.debug.classpath") == "true") {
+        if (System.getProperty("pop.debug.classpath") == "true") {
           System.out.println("\n---- Current ClassLoader ----\n")
           System.out.println(this.getClass.getClassLoader)
           System.out.println("\n---- The where is Scala? test ----\n")
@@ -70,7 +70,7 @@ object FastWatchServerStart {
 
                           if (lastState.isSuccess) {
                             println()
-                            println("--- (RELOAD) ---")
+                            println(scala.Console.MAGENTA + "--- (RELOAD) ---" + scala.Console.RESET)
                             println()
                           }
 
@@ -83,7 +83,7 @@ object FastWatchServerStart {
                               toInstantiate.newInstance().asInstanceOf[Base]
                             }
 
-                          // Starcleant the new one
+                          // Startclean the new one
                           newApplication.start(projectClassloader, port)
 
                           Success(newApplication)

@@ -24,7 +24,7 @@ import sbt.Def.Initialize
 import scala.concurrent.{ Await, ExecutionContext }
 import scala.util.control.NonFatal
 
-object FastWatch extends AutoPlugin {
+object PopPlugin extends AutoPlugin {
 
   override def requires = JvmPlugin
 

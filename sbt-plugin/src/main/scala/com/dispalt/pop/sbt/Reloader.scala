@@ -18,7 +18,7 @@ import scala.collection.JavaConverters._
 import sbt._
 import sbt.Keys._
 import better.files.{ File => ScalaFile, _ }
-import FastWatch.autoImport._
+import PopPlugin.autoImport._
 import com.dispalt.pop.sbt.PlayExceptions.{ CompilationException, UnexpectedException }
 import com.dispalt.pop.PlayException
 import com.dispalt.pop.core.BuildLink
@@ -148,7 +148,7 @@ object Reloader {
                                      reloadLock)
 
     val server = {
-      val mainClass = applicationLoader.loadClass("com.dispalt.pop.FastWatchServerStart")
+      val mainClass = applicationLoader.loadClass("com.dispalt.pop.PopReloadableDevServerStart")
       val mainDev   = mainClass.getMethod("mainDevHttpMode", classOf[BuildLink], classOf[Int], classOf[String])
       mainDev.invoke(null, reloader, httpPort: java.lang.Integer, spawnMainClass).asInstanceOf[ReloadableServer]
     }
@@ -478,7 +478,7 @@ object WatchState {
   *
   */
 object RunSupport {
-  import FastWatch.autoImport._
+  import PopPlugin.autoImport._
 
   def reloadRunTask(
       extraConfigs: Map[String, String]
@@ -502,7 +502,7 @@ object RunSupport {
       classpath,
       reloadCompile,
       popClassLoaderDecorator.value,
-      FastWatch.fastWatchMonitoredProjectDirs.value.flatMap(_._2),
+      PopPlugin.fastWatchMonitoredProjectDirs.value.flatMap(_._2),
       popWatcherService.value,
       baseDirectory.value,
       extraConfigs.toSeq,
